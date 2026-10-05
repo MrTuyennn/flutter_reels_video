@@ -1,0 +1,25 @@
+# Flutter/Dart/Pub
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+pubspec.lock
+
+# Example app (keep its pubspec.lock, ignore everything else generated)
+example/.dart_tool/
+example/build/
+example/ios/Flutter/
+example/ios/Pods/
+example/android/.gradle/
+example/android/local.properties
+example/.flutter-plugins
+example/.flutter-plugins-dependencies
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# macOS
+.DS_Store
