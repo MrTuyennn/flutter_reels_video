@@ -73,7 +73,8 @@ class _ReelsFeedPageState extends State<ReelsFeedPage> {
   }
 
   Future<void> _loadNextPage() async {
-    if (_isLoadingMore || !_hasMore) return; // dedupe guard — package doesn't do this for you
+    if (_isLoadingMore || !_hasMore)
+      return; // dedupe guard — package doesn't do this for you
     _isLoadingMore = true;
 
     final page = await _api.fetchPage(_nextPage);
