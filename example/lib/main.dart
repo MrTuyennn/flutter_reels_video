@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:reels_player/reels_player.dart';
+import 'package:flutter_reels_video/flutter_reels_video.dart';
 
 void main() => runApp(const ExampleApp());
 
@@ -73,8 +73,8 @@ class _ReelsFeedPageState extends State<ReelsFeedPage> {
   }
 
   Future<void> _loadNextPage() async {
-    if (_isLoadingMore || !_hasMore)
-      return; // dedupe guard — package doesn't do this for you
+    // dedupe guard — package doesn't do this for you
+    if (_isLoadingMore || !_hasMore) return;
     _isLoadingMore = true;
 
     final page = await _api.fetchPage(_nextPage);

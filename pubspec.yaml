@@ -1,4 +1,4 @@
-name: reels_player
+name: flutter_reels_video
 description: >
   A minimal, reusable vertical video reels pager (PageView-based) with
   autoplay, preloading and pagination support.

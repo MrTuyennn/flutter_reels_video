@@ -1,4 +1,4 @@
-# reels_player
+# flutter_reels_video
 
 A minimal, reusable vertical video reels pager for Flutter — think
 TikTok/Reels/Shorts scrolling. Pass in a list of videos and it handles
@@ -27,13 +27,13 @@ just playing the current video and preparing the next one.
 
 ```yaml
 dependencies:
-  reels_player: ^0.0.1
+  flutter_reels_video: ^0.0.1
 ```
 
 ## Usage
 
 ```dart
-import 'package:reels_player/reels_player.dart';
+import 'package:flutter_reels_video/flutter_reels_video.dart';
 
 ReelsPagerView(
   videos: const [

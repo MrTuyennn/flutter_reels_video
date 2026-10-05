@@ -1,5 +1,5 @@
-name: reels_player_example
-description: Example usage of the reels_player package, including paginated onLoadMore.
+name: flutter_reels_video_example
+description: Example usage of the flutter_reels_video package, including paginated onLoadMore.
 publish_to: "none"
 version: 0.0.1
 
@@ -10,7 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  reels_player:
+  flutter_reels_video:
     path: ../
 
 dev_dependencies:

@@ -1,11 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:reels_player_example/main.dart';
+import 'package:flutter_reels_video_example/main.dart';
 
 // Playback itself needs a real platform (video_player has no test
 // implementation), so this exercises the example's own paging logic —
 // swipe/autoplay are checked by running the app (`flutter run`).
 void main() {
-  test('fetchPage pages through the sample videos then returns empty', () async {
+  test('fetchPage pages through the sample videos then returns empty',
+      () async {
     final api = FakeReelsApi();
 
     final page1 = await api.fetchPage(1);

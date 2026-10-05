@@ -1,4 +1,4 @@
-library reels_player;
+library flutter_reels_video;
 
 export 'src/controller/reel_video_controller.dart';
 export 'src/models/reel_video.dart';
