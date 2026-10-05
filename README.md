@@ -5,8 +5,10 @@ TikTok/Reels/Shorts scrolling. Pass in a list of videos and it handles
 paging, autoplay, preloading the next video, pause/resume on tap, mute and
 pagination for you.
 
-Built on `PageView` for the scroll mechanics and `flutter_bloc` internally
-to manage playback state — you don't need to know bloc to use it.
+Built on `PageView` with plain Flutter state internally — no state
+management library required. The video list itself is yours to manage
+however you like (bloc, Riverpod, `setState`, ...); this widget's job is
+just playing the current video and preparing the next one.
 
 ## Features
 

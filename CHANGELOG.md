@@ -5,4 +5,4 @@
   preloading and automatic controller disposal outside the viewport.
 * `onLoadMore` / `loadMoreThreshold` for paginated feeds — append to the
   existing video list in place without resetting playback position.
-* Tap-to-pause/play and mute support via `ReelsBloc`.
+* Tap-to-pause/play and mute support.

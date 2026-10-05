@@ -1,15 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:video_player/video_player.dart';
 
-import '../bloc/reels_bloc.dart';
-import '../bloc/reels_event.dart';
-import '../bloc/reels_state.dart';
 import '../controller/reel_video_controller.dart';
 import '../models/reel_video.dart';
 
-/// Vertical, swipeable video reels. Pass in [videos] — paging, preloading,
-/// playback and mute state are all handled internally.
 class ReelsPagerView extends StatefulWidget {
   const ReelsPagerView({
     super.key,
@@ -20,25 +14,15 @@ class ReelsPagerView extends StatefulWidget {
     this.loadMoreThreshold = 3,
   });
 
-  /// The videos to render, one per page. Pass a longer list later (same
-  /// prefix) to append without resetting playback; pass a different list to
-  /// fully reset to a new feed.
   final List<ReelVideo> videos;
 
-  /// Which page to show first.
   final int initialIndex;
 
-  /// Shown for a page while its video is not yet initialized. Defaults to
-  /// the video's [ReelVideo.thumbnailUrl], or a black background.
-  final Widget Function(BuildContext context, ReelVideo video)? placeholderBuilder;
+  final Widget Function(BuildContext context, ReelVideo video)?
+      placeholderBuilder;
 
-  /// Called once when the viewer gets within [loadMoreThreshold] pages of
-  /// the end of [videos] — fetch your next page here and pass a longer
-  /// [videos] list back in (same items + appended ones) to extend the pager
-  /// in place, without resetting playback position.
   final VoidCallback? onLoadMore;
 
-  /// How many pages before the end of the list [onLoadMore] fires.
   final int loadMoreThreshold;
 
   @override
@@ -46,15 +30,20 @@ class ReelsPagerView extends StatefulWidget {
 }
 
 class _ReelsPagerViewState extends State<ReelsPagerView> {
-  late final ReelsBloc _bloc;
   late final PageController _pageController;
+
+  final Map<int, ReelVideoController> _controllers = {};
+
+  late int _currentIndex;
+  final bool _muted = false;
   int? _loadMoreRequestedAtLength;
 
   @override
   void initState() {
     super.initState();
+    _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: widget.initialIndex);
-    _bloc = ReelsBloc()..add(LoadReels(widget.videos, initialIndex: widget.initialIndex));
+    _resetPlayback(widget.initialIndex);
   }
 
   @override
@@ -63,12 +52,9 @@ class _ReelsPagerViewState extends State<ReelsPagerView> {
     if (_listEquals(oldWidget.videos, widget.videos)) return;
 
     if (_isAppend(oldWidget.videos, widget.videos)) {
-      // Same items up front, just extended — keep position & controllers.
-      _bloc.add(AppendReels(widget.videos.sublist(oldWidget.videos.length)));
+      _maybeRequestLoadMore();
     } else {
-      // A genuinely different list (new feed/category) — full reset.
-      _loadMoreRequestedAtLength = null;
-      _bloc.add(LoadReels(widget.videos, initialIndex: widget.initialIndex));
+      _resetPlayback(widget.initialIndex);
     }
   }
 
@@ -89,10 +75,103 @@ class _ReelsPagerViewState extends State<ReelsPagerView> {
     return true;
   }
 
+  Future<void> _resetPlayback(int index) async {
+    for (final controller in _controllers.values) {
+      controller.dispose();
+    }
+    _controllers.clear();
+    _loadMoreRequestedAtLength = null;
+
+    setState(() => _currentIndex = index);
+    if (widget.videos.isEmpty) return;
+
+    await _initializeAt(index, autoPlay: true);
+    await _initializeAt(index + 1, autoPlay: false);
+    if (mounted) setState(() {});
+    _maybeRequestLoadMore();
+  }
+
+  Future<void> _onPageChanged(int index) async {
+    final previous = _currentIndex;
+
+    if (index > previous) {
+      _disposeAt(index - 2);
+      _pauseAt(index - 1);
+    } else if (index < previous) {
+      _disposeAt(index + 2);
+      _pauseAt(index + 1);
+    }
+
+    setState(() => _currentIndex = index);
+    _maybeRequestLoadMore();
+
+    if (_controllers.containsKey(index)) {
+      _controllers[index]?.play();
+    } else {
+      await _initializeAt(index, autoPlay: true);
+    }
+
+    final lookahead = index > previous ? index + 1 : index - 1;
+    await _initializeAt(lookahead, autoPlay: false);
+
+    if (mounted) setState(() {});
+  }
+
+  void _togglePlayPause() {
+    final controller = _controllers[_currentIndex];
+    if (controller == null) return;
+    if (controller.value.isPlaying) {
+      controller.pause();
+    } else {
+      controller.play();
+    }
+  }
+
+  void _maybeRequestLoadMore() {
+    final onLoadMore = widget.onLoadMore;
+    if (onLoadMore == null || widget.videos.isEmpty) return;
+
+    final remaining = widget.videos.length - 1 - _currentIndex;
+    if (remaining <= widget.loadMoreThreshold &&
+        _loadMoreRequestedAtLength != widget.videos.length) {
+      _loadMoreRequestedAtLength = widget.videos.length;
+      onLoadMore();
+    }
+  }
+
+  Future<void> _initializeAt(int index, {required bool autoPlay}) async {
+    if (index < 0 || index >= widget.videos.length) return;
+    if (_controllers.containsKey(index)) return;
+
+    final video = widget.videos[index];
+    final controller = ReelVideoController(
+      url: video.url,
+      autoPlay: autoPlay,
+      loop: video.loop,
+      muted: _muted,
+    );
+    _controllers[index] = controller;
+    await controller.initialize();
+  }
+
+  void _pauseAt(int index) {
+    final controller = _controllers[index];
+    if (controller == null) return;
+    controller.pause();
+    controller.seekTo(Duration.zero);
+  }
+
+  void _disposeAt(int index) {
+    final controller = _controllers.remove(index);
+    controller?.dispose();
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
-    _bloc.close();
+    for (final controller in _controllers.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -108,45 +187,23 @@ class _ReelsPagerViewState extends State<ReelsPagerView> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: _bloc,
-      child: BlocListener<ReelsBloc, ReelsState>(
-        listenWhen: (previous, current) =>
-            widget.onLoadMore != null &&
-            (previous.currentIndex != current.currentIndex ||
-                previous.videos.length != current.videos.length),
-        listener: (context, state) {
-          if (state.videos.isEmpty) return;
-          final remaining = state.videos.length - 1 - state.currentIndex;
-          if (remaining <= widget.loadMoreThreshold &&
-              _loadMoreRequestedAtLength != state.videos.length) {
-            _loadMoreRequestedAtLength = state.videos.length;
-            widget.onLoadMore!();
-          }
-        },
-        child: BlocBuilder<ReelsBloc, ReelsState>(
-          builder: (context, state) {
-            if (state.videos.isEmpty) return const SizedBox.shrink();
-            return PageView.builder(
-              scrollDirection: Axis.vertical,
-              controller: _pageController,
-              pageSnapping: true,
-              itemCount: state.videos.length,
-              onPageChanged: (index) => _bloc.add(ChangePage(index)),
-              itemBuilder: (context, index) {
-                final video = state.videos[index];
-                final controller = index == state.currentIndex ? state.controllers[index] : null;
-                return _ReelItem(
-                  video: video,
-                  controller: controller,
-                  placeholder: _placeholder(context, video),
-                  onTap: () => _bloc.add(const TogglePlayPause()),
-                );
-              },
-            );
-          },
-        ),
-      ),
+    if (widget.videos.isEmpty) return const SizedBox.shrink();
+    return PageView.builder(
+      scrollDirection: Axis.vertical,
+      controller: _pageController,
+      pageSnapping: true,
+      itemCount: widget.videos.length,
+      onPageChanged: _onPageChanged,
+      itemBuilder: (context, index) {
+        final video = widget.videos[index];
+        final controller = index == _currentIndex ? _controllers[index] : null;
+        return _ReelItem(
+          video: video,
+          controller: controller,
+          placeholder: _placeholder(context, video),
+          onTap: _togglePlayPause,
+        );
+      },
     );
   }
 }
@@ -197,7 +254,8 @@ class _ReelItem extends StatelessWidget {
                         ),
                       ),
                       if (!value.isPlaying)
-                        const Icon(Icons.play_arrow, size: 72, color: Colors.white70),
+                        const Icon(Icons.play_arrow,
+                            size: 72, color: Colors.white70),
                     ],
                   );
                 },

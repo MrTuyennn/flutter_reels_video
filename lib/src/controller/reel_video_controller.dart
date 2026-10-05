@@ -1,7 +1,5 @@
 import 'package:video_player/video_player.dart';
 
-/// Thin wrapper around [VideoPlayerController] with reels-friendly defaults:
-/// autoplay, loop and start-muted flags applied as soon as it initializes.
 class ReelVideoController extends VideoPlayerController {
   ReelVideoController({
     required this.url,
